@@ -33,10 +33,14 @@ abcdefghijklmnopqrstuvwxyz
 	<div>
 		<label>Text to Render in Specified Font:</label>
 		<br />
-		<input
+		<textarea
 			id="inputTextToRender"
-			value="The quick red fox jumped..."
-		/>
+			cols="40" rows="4"
+		>
+The quick fox jumped
+over the lazy brown
+dogs.
+		</textarea>
 	</div>
 
 	<div>
@@ -185,8 +189,11 @@ class FontFromImage
 
 		var cellSizeInPixels = this.cellSizeInPixels;
 
+		var newline = "\n";
+		var textLinesCount = text.split(newline).length;
+
 		var canvasTextRenderedSize =
-			new Coords(text.length, 1).multiply(cellSizeInPixels);
+			new Coords(text.length, textLinesCount).multiply(cellSizeInPixels);
 		var canvasTextRendered = d.createElement("canvas");
 		canvasTextRendered.width = canvasTextRenderedSize.x;
 		canvasTextRendered.height = canvasTextRenderedSize.y;
@@ -202,6 +209,12 @@ class FontFromImage
 		for (var i = 0; i < text.length; i++)
 		{
 			var character = text[i];
+
+			if (character == newline)
+			{
+				drawPosInPixels.x = 0;
+				drawPosInPixels.y += cellSizeInPixels.y
+			}
 
 			for (var r = 0; r < this.characterGridAsStrings.length; r++)
 			{

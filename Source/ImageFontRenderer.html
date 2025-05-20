@@ -15,19 +15,63 @@
 	</p>
 
 	<div>
-		<label>Image for Grid of Characters:</label>
+		<label>Image for Characters:</label>
 		<br />
 		<input type="file" onchange="inputFile_Loaded(this);"></input>
-		<div id="divImageForCharacterGrid">[none]</div>
+		<div id="divImageForChars">[none]</div>
 	</div>
 
 	<div>
-		<label>Arrangement of Characters in Grid:</label>
+		<label>Boundaries of Characters in Pixels:</label>
 		<br />
-		<textarea id="textareaCharacterGrid" cols="40" rows="8">
+		<button onclick="buttonCharBoundsCreateGrid_Clicked();">Create Grid</button>
+		<label>of</label>
+		<input
+			id="inputGridSizeInCellsX"
+			type="number"
+			step="1"
+			min="1"
+			style="width:40px"
+			value="26"
+		></input>
+		<label>x</label>
+		<input
+			id="inputGridSizeInCellsY"
+			type="number"
+			step="1"
+			min="1"
+			style="width:40px"
+			value="3"
+		></input>
+		<label>cells, each</label>
+		<input
+			id="inputGridCellSizeInPixelsX"
+			type="number"
+			step="1"
+			min="1"
+			value="16"
+			style="width:40px"
+		></input>
+		<label>x</label>
+		<input
+			id="inputGridCellSizeInPixelsY"
+			type="number"
+			step="1"
+			min="1"
+			style="width:40px"
+			value="16"
+		></input>
+		<label>pixels, for chars:</label>
+		<br />
+		<textarea id="textareaCharsForGridCells" cols="40" rows="4">
 ABCDEFGHIJKLMNOPQRSTUVWXYZ
 abcdefghijklmnopqrstuvwxyz
-0123456789.,?!;:'"()[]    
+0123456789.,?!;:'"()[]/   
+		</textarea>
+		<br />
+		<label>Boundaries Entered:</label>
+		<br />
+		<textarea id="textareaCharBounds" cols="40" rows="8">
 		</textarea>
 	</div>
 
@@ -38,8 +82,8 @@ abcdefghijklmnopqrstuvwxyz
 			id="inputTextToRender"
 			cols="40" rows="4"
 		>
-The quick fox jumped
-over the lazy brown
+The quick brown fox
+jumped over the lazy 
 dogs.
 		</textarea>
 	</div>
@@ -50,7 +94,7 @@ dogs.
 
 	<div>
 		<label>Rendered Text:</label>
-		<div id="divTextRendered">[none]</div>
+		<div id="divTextRendered" style="border:1px solid">[none]</div>
 	</div>
 
 </div>
@@ -59,40 +103,141 @@ dogs.
 
 // UI.
 
+function buttonCharBoundsCreateGrid_Clicked()
+{
+	var d = document;
+
+	var inputGridSizeInCellsX =
+		d.getElementById("inputGridSizeInCellsX");
+	var inputGridSizeInCellsY =
+		d.getElementById("inputGridSizeInCellsY");
+
+	var gridSizeInCellsX =
+		parseInt(inputGridSizeInCellsX.value);
+	var gridSizeInCellsY =
+		parseInt(inputGridSizeInCellsY.value);
+
+	var gridSizeInCells =
+		new Coords(gridSizeInCellsX, gridSizeInCellsY);
+
+	var inputGridCellSizeInPixelsX =
+		d.getElementById("inputGridCellSizeInPixelsX");
+	var inputGridCellSizeInPixelsY =
+		d.getElementById("inputGridCellSizeInPixelsY");
+
+	var gridCellSizeInPixelsX =
+		parseInt(inputGridCellSizeInPixelsX.value);
+	var gridCellSizeInPixelsY =
+		parseInt(inputGridCellSizeInPixelsY.value);
+
+	var gridCellSizeInPixels =
+		new Coords(gridCellSizeInPixelsX, gridCellSizeInPixelsY);
+
+	var newline = "\n";
+
+	var textareaCharsForGridCells =
+		d.getElementById("textareaCharsForGridCells");
+	var charsAsLines =
+		textareaCharsForGridCells.value.split(newline);
+
+	var charBoundsGroupSoFar = [];
+
+	var cellPosInCells = new Coords();
+	var cellPosInPixels = new Coords();
+
+	for (var y = 0; y < gridSizeInCells.y; y++)
+	{
+		cellPosInCells.y = y;
+
+		for (var x = 0; x < gridSizeInCells.x; x++)
+		{
+			cellPosInCells.x = x;
+
+			cellPosInPixels
+				.overwriteWith(cellPosInCells)
+				.multiply(gridCellSizeInPixels);
+
+			var bounds = Bounds.fromMinAndSize
+			(
+				cellPosInPixels.clone(),
+				gridCellSizeInPixels // .clone()?
+			);
+
+			var character = charsAsLines[y][x];
+
+			var charAndBounds = new CharAndBounds
+			(
+				character,
+				bounds
+			);
+
+			charBoundsGroupSoFar.push(charAndBounds);
+		}
+	}
+
+	var charBoundsGroupAsLines =
+		charBoundsGroupSoFar.map(x => x.toString() );
+
+	var charBoundsGroupAsText =
+		charBoundsGroupAsLines.join(newline);
+
+	var textareaCharBounds =
+		d.getElementById("textareaCharBounds");
+
+	textareaCharBounds.value = charBoundsGroupAsText;
+}
+
+function buttonCharBoundsLoadDemo_Clicked()
+{
+}
+
 function buttonRender_Clicked()
 {
 	var d = document;
 
-	var divImageForCharacterGrid =
-		d.getElementById("divImageForCharacterGrid");
-	var imageForCharacterGridAsImgElement =
-		divImageForCharacterGrid.children[0];
+	var textareaCharBounds =
+		d.getElementById("textareaCharBounds");
+	var charBoundsGroupAsString =
+		textareaCharBounds.value;
+	var newline = "\n";
+	var charBoundsGroupAsStrings =
+		charBoundsGroupAsString
+			.split(newline)
+			.filter(x => x.trim() != "");
+	var charBoundsGroup =
+		charBoundsGroupAsStrings
+			.map(x => CharAndBounds.fromString(x));
 
-	if (imageForCharacterGridAsImgElement == null)
+	var divImageForChars =
+		d.getElementById("divImageForChars");
+	var imageForCharsAsImgElement =
+		divImageForChars.children[0];
+
+	if (imageForCharsAsImgElement == null)
 	{
 		alert("Upload a font image first!");
 	}
+	else if (charBoundsGroup.length == 0)
+	{
+		alert("Specify bounds for characters within the image first!");
+	}
 	else
 	{
-		var textareaCharacterGrid =
-			d.getElementById("textareaCharacterGrid");
-		var characterGridAsString = textareaCharacterGrid.value;
-		var newline = "\n";
-		var characterGridAsStrings =
-			characterGridAsString.split(newline).filter(x => x.trim() != "");
-
 		var fontFromImage = new FontFromImage
 		(
-			imageForCharacterGridAsImgElement,
-			characterGridAsStrings
+			imageForCharsAsImgElement,
+			charBoundsGroup
 		);
 
-		var inputTextToRender = d.getElementById("inputTextToRender");
+		var inputTextToRender =
+			d.getElementById("inputTextToRender");
 		var textToRender = inputTextToRender.value;
 
-		var canvasTextRendered = fontFromImage.textToCanvas(textToRender);
+		var canvasTextRendered =
+			fontFromImage.textToCanvas(textToRender);
 
-		divTextRendered = d.getElementById("divTextRendered");
+		divTextRendered =
+			d.getElementById("divTextRendered");
 		divTextRendered.innerHTML = "";
 		divTextRendered.appendChild(canvasTextRendered);
 	}
@@ -111,10 +256,10 @@ function inputFile_Loaded(inputFile)
 			var imageAsImgElement = d.createElement("img");
 			imageAsImgElement.onload = (event2) =>
 			{
-				var divImageForCharacterGrid =
-					d.getElementById("divImageForCharacterGrid");
-				divImageForCharacterGrid.innerHTML = "";
-				divImageForCharacterGrid.appendChild(imageAsImgElement);
+				var divImageForChars =
+					d.getElementById("divImageForChars");
+				divImageForChars.innerHTML = "";
+				divImageForChars.appendChild(imageAsImgElement);
 			}
 			imageAsImgElement.src = imageAsDataUrl;
 		};
@@ -124,12 +269,105 @@ function inputFile_Loaded(inputFile)
 
 // Classes.
 
+class Bounds
+{
+	constructor(min, max)
+	{
+		this.min = min;
+		this.max = max;
+	}
+
+	static fromMinAndSize(min, size)
+	{
+		var max = size.clone().add(min);
+		return new Bounds(min, max);
+	}
+
+	static fromString(stringToParse)
+	{
+		var minAndMaxAsStrings = stringToParse.split("-");
+
+		var minAsString = minAndMaxAsStrings[0];
+		var maxAsString = minAndMaxAsStrings[1];
+
+		var min = Coords.fromStringXxY(minAsString);
+		var max = Coords.fromStringXxY(maxAsString);
+
+		return new Bounds(min, max);
+	}
+
+	size()
+	{
+		return this.max.clone().subtract(this.min);
+	}
+
+	toString()
+	{
+		var returnValue =
+			this.min.toStringXxY()
+			+ "-"
+			+ this.max.toStringXxY();
+
+		return returnValue;
+	}
+}
+
+class CharAndBounds
+{
+	constructor(character, boundsInPixels)
+	{
+		this.character = character;
+		this.boundsInPixels = boundsInPixels;
+	}
+
+	static fromString(stringToParse)
+	{
+		var character = stringToParse[0];
+
+		stringToParse = stringToParse.substr(2);
+
+		var bounds = Bounds.fromString(stringToParse);
+
+		return new CharAndBounds
+		(
+			character, bounds
+		);
+	}
+
+	toString()
+	{
+		var returnValue =
+			this.character
+			+ ":"
+			+ this.boundsInPixels.toString();
+
+		return returnValue;
+	}
+}
+
 class Coords
 {
 	constructor(x, y)
 	{
 		this.x = x;
 		this.y = y;
+	}
+
+	static fromStringXxY(stringToParse)
+	{
+		var xAndY =
+			stringToParse
+				.split("x")
+				.map(x => parseFloat(x) );
+
+		return new Coords(xAndY[0], xAndY[1]);
+	}
+
+	add(other)
+	{
+		this.x += other.x;
+		this.y += other.y;
+		return this;
 	}
 
 	clone()
@@ -157,97 +395,152 @@ class Coords
 		this.y = other.y;
 		return this;
 	}
+
+	subtract(other)
+	{
+		this.x -= other.x;
+		this.y -= other.y;
+		return this;
+	}
+
+	toStringXxY()
+	{
+		return this.x + "x" + this.y;
+	}
 }
 
 class FontFromImage
 {
-	constructor(imageForCharacterGrid, characterGridAsStrings)
+	constructor
+	(
+		imageForCharacterGrid,
+		charBoundsGroup
+	)
 	{
 		this.imageForCharacterGrid = imageForCharacterGrid;
-		this.characterGridAsStrings = characterGridAsStrings;
+		this.charBoundsGroup = charBoundsGroup;
 
 		this.imageSizeInPixels = new Coords
 		(
 			this.imageForCharacterGrid.width,
 			this.imageForCharacterGrid.height
 		);
-
-		this.gridSizeInCells = new Coords
-		(
-			this.characterGridAsStrings[0].length,
-			this.characterGridAsStrings.length
-		);
-
-		this.cellSizeInPixels =
-			this.imageSizeInPixels
-				.clone()
-				.divide(this.gridSizeInCells);
 	}
 
 	textToCanvas(text)
 	{
 		var d = document;
 
-		var cellSizeInPixels = this.cellSizeInPixels;
-
 		var newline = "\n";
-		var textLinesCount = text.split(newline).length;
-
-		var canvasTextRenderedSize =
-			new Coords(text.length, textLinesCount).multiply(cellSizeInPixels);
-		var canvasTextRendered = d.createElement("canvas");
-		canvasTextRendered.width = canvasTextRenderedSize.x;
-		canvasTextRendered.height = canvasTextRenderedSize.y;
-
-		var graphicsContextToDrawTo = canvasTextRendered.getContext("2d");
-
-		graphicsContextToDrawTo.fillStyle = "Black";
-
-		var readPosInCells = new Coords();
-		var readPosInPixels = new Coords();
-		var drawPosInPixels = new Coords(0, 0);
-
-		for (var i = 0; i < text.length; i++)
+		var textLines = text.split(newline);
+		var textLinesCount = textLines.length;
+		var textLineWidthMax = 0;
+		var canvasSizeSoFar = new Coords(0, 0);
+		for (var i = 0; i < textLines.length; i++)
 		{
-			var character = text[i];
+			var textLine = textLines[i];
+			var textLineWidthInPixelsSoFar = 0;
+			var lineCharHeightMaxSoFar = 0;
 
-			if (character == newline)
+			for (var x = 0; x < textLine.length; x++)
 			{
-				drawPosInPixels.x = 0;
-				drawPosInPixels.y += cellSizeInPixels.y
+				var character = textLine[x];
+
+				var charBounds = this.charBoundsGroup.find
+				(
+					x => x.character == character
+				);
+
+				if (charBounds != null)
+				{
+					var charSizeInPixels =
+						charBounds.boundsInPixels.size();
+
+					textLineWidthInPixelsSoFar +=
+						charSizeInPixels.x;
+
+					if (charSizeInPixels.y > lineCharHeightMaxSoFar)
+					{
+						lineCharHeightMaxSoFar =
+							charSizeInPixels.y;
+					}
+				}
 			}
 
-			for (var r = 0; r < this.characterGridAsStrings.length; r++)
+			if (textLineWidthInPixelsSoFar > canvasSizeSoFar.x)
 			{
-				readPosInCells.y = r;
+				canvasSizeSoFar.x = textLineWidthInPixelsSoFar;
+			}
 
-				var characterRow = this.characterGridAsStrings[r];
-				var characterOffsetWithinRow =
-					characterRow.indexOf(character);
+			canvasSizeSoFar.y += lineCharHeightMaxSoFar;
+		}
 
-				if (characterOffsetWithinRow >= 0)
+		var canvasTextRenderedSize = canvasSizeSoFar;
+
+		var canvasTextRendered =
+			d.createElement("canvas");
+		canvasTextRendered.width =
+			canvasTextRenderedSize.x;
+		canvasTextRendered.height =
+			canvasTextRenderedSize.y;
+
+		var g = canvasTextRendered.getContext("2d");
+
+		g.fillStyle = "Black";
+
+		var drawPosInPixels = new Coords(0, 0);
+
+		for (var i = 0; i < textLines.length; i++)
+		{
+			var textLine = textLines[i];
+			var textLineWidthInPixelsSoFar = 0;
+			var lineCharHeightMaxSoFar = 0;
+
+			drawPosInPixels.x = 0;
+
+			for (var x = 0; x < textLine.length; x++)
+			{
+				var character = textLine[x];
+
+				var charAndBounds = this.charBoundsGroup.find
+				(
+					x => x.character == character
+				);
+
+				if (charAndBounds != null)
 				{
-					readPosInCells.x = characterOffsetWithinRow;
+					var charBounds = charAndBounds.boundsInPixels;
 
-					readPosInPixels
-						.overwriteWith(readPosInCells)
-						.multiply(cellSizeInPixels);
+					var sourcePosInPixels =
+						charBounds.min;
+					var charSizeInPixels =
+						charBounds.size();
 
-					graphicsContextToDrawTo.drawImage
+					textLineWidthInPixelsSoFar +=
+						charSizeInPixels.x;
+
+					if (charSizeInPixels.y > lineCharHeightMaxSoFar)
+					{
+						lineCharHeightMaxSoFar =
+							charSizeInPixels.y;
+					}
+
+					g.drawImage
 					(
 						this.imageForCharacterGrid,
-						readPosInPixels.x, readPosInPixels.y,
-						cellSizeInPixels.x, cellSizeInPixels.y,
+						sourcePosInPixels.x, sourcePosInPixels.y,
+						charSizeInPixels.x, charSizeInPixels.y,
 						drawPosInPixels.x, drawPosInPixels.y,
-						cellSizeInPixels.x, cellSizeInPixels.y
+						charSizeInPixels.x, charSizeInPixels.y
 					);
 
-					drawPosInPixels.x += cellSizeInPixels.x;
+					drawPosInPixels.x += charSizeInPixels.x;
 				}
+			}
 
-			} // end for each row in character grid
+			drawPosInPixels.y += lineCharHeightMaxSoFar;
+		}
 
-		} // end for char in text
 
 		return canvasTextRendered;
 	}
